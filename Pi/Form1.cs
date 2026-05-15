@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Data.SqlClient;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using MySqlConnector;
 
-namespace Pi
+namespace Projeto
 {
     public partial class Form1 : Form
     {
@@ -17,62 +18,139 @@ namespace Pi
         {
             InitializeComponent();
         }
-
-        private void label1_Click(object sender, EventArgs e)
+        const string DADOS_CONEXAO =
+            "server=localhost;user=root;password=;database=projeto_banco_csharp";
+        private void btnSalvar_Click(object sender, EventArgs e)
         {
+            string campoNome = txtNome.Text;
+            string campoServico = cbServico.Text;
+            string campoData = dtpData.Text;
 
-        }
+            DateTime dataConvertida = DateTime.Parse(campoData);
 
-        private void Form1_Load(object sender, EventArgs e)
-        {
+            int controleLinhasAfetadas = 0;
 
-        }
+            //MessageBox.Show( 
+            //    $"nome: {campoNome}\n" +
+            //    $"serviço: {campoServico}\n" +
+            //    $"data: {campoData}\n" +
+            //    $"data Convertida: {dataConvertida}");
 
-        private void label3_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void groupBox1_Enter(object sender, EventArgs e)
-        {
-
-        }
-
-        private void Salvar_Click(object sender, EventArgs e)
-        {   
-
-            string nomedoferiado = txtNome.Text;
-            int controle = 0;
-            string dadosConexao =
-                "server=localhost;user=root;password=;database=db_ecoenficiencia";
-            using (MySqlConnection conn = new MySqlConnection(dadosConexao))
-            {//utilizo das informações
+            
+            using (MySqlConnection conn = new MySqlConnection(DADOS_CONEXAO) )
+            {// utilizo das informações
                 conn.Open();
-                    string scriptInsert = "INSERT INTO tb_cadastro (nomedoferiado, datadoferiado, feed) VALUE (@nomedoferiado, @datadoferiado, @feed)";
+                string scriptInsert = "INSERT INTO tb_cadastro (nome, servico, data_servico) " +
+                                        "VALUE (@nome, @servico, @data_servico)";
 
-                using (MySqlCommand comando = new MySqlCommand(scriptInsert, conn))
+                using (MySqlCommand comando = new MySqlCommand(scriptInsert,conn))
                 {
-                    comando.Parameters.AddWithValue("@nomedoferiado", nomedoferiado);
-                    comando.Parameters.AddWithValue("@datadoferiado", DateTime.Now); // Substitua pelo valor correto
-                    comando.Parameters.AddWithValue("@feed", ""); // Substitua pelo valor correto
+                    comando.Parameters.AddWithValue("@nome", campoNome);
+                    comando.Parameters.AddWithValue("@servico", campoServico);
+                    comando.Parameters.AddWithValue("@data_servico", dataConvertida);
 
-                    controle = comando.ExecuteNonQuery();
-                    
+                    controleLinhasAfetadas = comando.ExecuteNonQuery();
                 }
                 conn.Close();
+            }//MysqlConnection
+
+            if (controleLinhasAfetadas > 0)
+            {
+                MessageBox.Show("Dados salvo com sucesso!");
+            } else
+            {
+                MessageBox.Show("Ops. Algo deu errado!!!");
             }
 
-            if (controle > 0)
-            {
-                MessageBox.Show("Dados inseridos com sucesso!");
-            }
-            else
-            {
-                MessageBox.Show("Erro ao inserir os dados.");
-            }
-                
+        }
 
-            //mySqlConnection 
+        private void btnConsultar_Click(object sender, EventArgs e)
+        {
+            string idConsulta = txtId.Text;
+
+
+            using (MySqlConnection conn = new MySqlConnection(DADOS_CONEXAO))
+            {
+                conn.Open();
+                string scriptConsultaIndividual = "SELECT * FROM tb_cadastro WHERE id = @id";
+
+                using (MySqlCommand comando = new MySqlCommand(scriptConsultaIndividual, conn))
+                {
+                    comando.Parameters.AddWithValue("@id", idConsulta);
+
+
+                    var dadosResultado = comando.ExecuteReader();
+
+                    while (dadosResultado.Read())
+                    {
+                        lbIdResultado.Text = dadosResultado["id"].ToString();
+                        lbNomeResultado.Text = dadosResultado["nome"].ToString();
+                        lbServicoResultado.Text = dadosResultado["servico"].ToString();
+                        lbDataResultado.Text = dadosResultado["data_servico"].ToString();
+                    }
+
+
+                }
+
+                conn.Close();
+            }
+            
+        }
+
+        private void btnConsultarLista_Click(object sender, EventArgs e)
+        {
+            using (MySqlConnection conn = new MySqlConnection(DADOS_CONEXAO))
+            {
+                conn.Open();
+
+                string campoServico = cbServico.Text;
+                DateTime dataConvertida = DateTime.Parse(dtpData.Text);
+
+                string scriptConsulta = "";
+
+                if (campoServico != "")
+                {
+                    scriptConsulta = "SELECT * FROM tb_cadastro WHERE servico = @servico";
+                } else
+                {
+                    scriptConsulta = "SELECT * FROM tb_cadastro";
+                }
+
+                if (dataConvertida != null && dataConvertida != DateTime.Now)
+                {
+                    scriptConsulta = "SELECT * FROM tb_cadastro WHERE data_servico = @data_servico";
+                }
+                else
+                {
+                    scriptConsulta = "SELECT * FROM tb_cadastro";
+                }
+
+                using (MySqlCommand comando = new MySqlCommand(scriptConsulta, conn))
+                {
+                    if (campoServico != "")
+                    {
+                        comando.Parameters.AddWithValue("@servico", campoServico);
+                    }
+
+                    if (dataConvertida != null && dataConvertida != DateTime.Now)
+                    {
+                        comando.Parameters.AddWithValue("@data_servico", dataConvertida);
+                    }
+
+                    MySqlDataAdapter resultadoConsultaMySql = new MySqlDataAdapter(comando);
+
+                    DataTable dt = new DataTable();
+
+                    resultadoConsultaMySql.Fill(dt);
+
+                    dgvListarTudo.DataSource = dt;
+
+
+
+                }
+
+                conn.Close();
+            }
         }
     }
 }

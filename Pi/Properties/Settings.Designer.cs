@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Pi.Properties
+namespace Projeto.Properties
 {
 
 
